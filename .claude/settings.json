@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find . -maxdepth 1 -iname \".env*\")",
+      "Bash(cat .env)",
+      "Bash(cat .env.local)",
+      "Bash(wmic logicaldisk *)",
+      "Bash(curl -s \"https://rzmpkdvowfpvhyujpejs.supabase.co/rest/v1/coin_flip_settings?select=*\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6bXBrZHZvd2Zwdmh5dWpwZWpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MzMzMjMsImV4cCI6MjA5MjUwOTMyM30.twtDgQwRsWgh3ITziqlXo3Se-WEsswp4iYqRNjA75kA\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6bXBrZHZvd2Zwdmh5dWpwZWpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MzMzMjMsImV4cCI6MjA5MjUwOTMyM30.twtDgQwRsWgh3ITziqlXo3Se-WEsswp4iYqRNjA75kA\")",
+      "Bash(export CLAUDE_CODE_TMPDIR=\"C:\\\\Users\\\\saint\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\e--Joe-Gaming-chicken-road\\\\0a462286-5e5d-4e9b-b5fc-b8a567467a9c\\\\scratchpad\")"
+    ]
+  }
+}

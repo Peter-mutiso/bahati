@@ -1,0 +1,25 @@
+project_id = "ddmpfhpmyonkhtfcdnhd"
+
+[functions.game-engine]
+verify_jwt = false
+
+[functions.process-referral]
+verify_jwt = false
+
+[functions.process-loan]
+verify_jwt = false
+
+[functions.coin-flip-engine]
+verify_jwt = false
+
+[functions.coin-train-engine]
+verify_jwt = false
+
+[functions.aviator-engine]
+verify_jwt = false
+
+[functions.wingo-engine]
+verify_jwt = false
+
+[functions.license-check]
+verify_jwt = false

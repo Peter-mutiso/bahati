@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const l = require\\('./node_modules/lucide-react'\\); console.log\\('FlipHorizontal:', !!l.FlipHorizontal, 'Train:', !!l.Train, 'Bomb:', !!l.Bomb, 'Plane:', !!l.Plane, 'Layers:', !!l.Layers, 'Circle:', !!l.Circle\\)\")",
+      "Bash(supabase db *)",
+      "Bash(supabase functions *)",
+      "Bash(grep -E \"\\\\.tsx?$\")",
+      "Bash(npx tsc *)",
+      "PowerShell($key = \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6bXBrZHZvd2Zwdmh5dWpwZWpzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjkzMzMyMywiZXhwIjoyMDkyNTA5MzIzfQ.5MmI3nNE02JFwIjU_0PT-TbR8jLnlhxuXIwBoc2f16Q\")"
+    ]
+  }
+}
