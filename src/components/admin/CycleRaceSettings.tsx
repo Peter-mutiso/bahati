@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Loader2, Save, Bike, Sparkles, User, Flag, Plus, Minus, Activity, Eye } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
+import { CycleRaceUpcomingQueue } from "@/components/admin/CycleRaceUpcomingQueue";
+import { CycleRacePredictions } from "@/components/admin/CycleRacePredictions";
 
 interface CyclistCustomization {
   name: string;
@@ -60,13 +62,17 @@ export function CycleRaceSettings() {
     refetchInterval: 3000
   });
 
-  // Fetch most recent race overall (includes finished) for the Outcome tab
+  // Fetch most recent active/finished race (excludes the pre-generated
+  // 'upcoming' queue) for the Outcome tab. Without the status exclusion this
+  // would always show the tail of the 100-race upcoming queue instead of the
+  // race that's actually live, since queue top-ups are inserted continuously.
   const { data: latestRace } = useQuery({
     queryKey: ["cycling-race-latest"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cycling_race_races")
         .select("*")
+        .neq("status", "upcoming")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -333,10 +339,12 @@ export function CycleRaceSettings() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="general">General</TabsTrigger>
               <TabsTrigger value="live">Live Pool</TabsTrigger>
               <TabsTrigger value="outcome">Outcome</TabsTrigger>
+              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+              <TabsTrigger value="predictions">Predictions</TabsTrigger>
               <TabsTrigger value="cyclists">Cyclists</TabsTrigger>
               <TabsTrigger value="odds">Odds</TabsTrigger>
               <TabsTrigger value="control">Control</TabsTrigger>
@@ -565,8 +573,9 @@ export function CycleRaceSettings() {
                   Predetermined Outcome
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  The winning cyclist is decided the moment a race is created, before betting closes.
-                  This shows that outcome early so you know how the current race will end.
+                  The winning cyclist is decided in advance, when the race enters the upcoming
+                  queue, well before betting closes. This shows the currently live race's outcome
+                  early. See the Upcoming tab for the full pre-generated queue.
                 </p>
 
                 {latestRace ? (
@@ -604,6 +613,14 @@ export function CycleRaceSettings() {
                   </div>
                 )}
               </div>
+            </TabsContent>
+
+            <TabsContent value="upcoming" className="space-y-6 mt-4">
+              <CycleRaceUpcomingQueue cyclistCustomization={formData.cyclist_customization} />
+            </TabsContent>
+
+            <TabsContent value="predictions" className="space-y-6 mt-4">
+              <CycleRacePredictions cyclistCustomization={formData.cyclist_customization} />
             </TabsContent>
 
             <TabsContent value="cyclists" className="space-y-6 mt-4">

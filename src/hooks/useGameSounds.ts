@@ -8,9 +8,28 @@ export const useGameSounds = () => {
   });
 
   useEffect(() => {
-    audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    // Browsers refuse to start an AudioContext outside a user gesture and
+    // log "The AudioContext was not allowed to start..." if we try anyway.
+    // Every play* function below already no-ops when audioContextRef.current
+    // is null, so instead of creating the context eagerly on mount, create
+    // it lazily on the page's first real interaction.
+    const ensureAudioContext = () => {
+      if (!audioContextRef.current) {
+        const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+        audioContextRef.current = new AudioContextCtor();
+      } else if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume().catch(() => {});
+      }
+    };
+
+    window.addEventListener('pointerdown', ensureAudioContext);
+    window.addEventListener('keydown', ensureAudioContext);
+
     return () => {
+      window.removeEventListener('pointerdown', ensureAudioContext);
+      window.removeEventListener('keydown', ensureAudioContext);
       audioContextRef.current?.close();
+      audioContextRef.current = null;
     };
   }, []);
 

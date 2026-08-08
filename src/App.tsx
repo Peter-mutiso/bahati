@@ -30,6 +30,7 @@ import MarketerDashboard from "./pages/MarketerDashboard";
 import MarketerCoinFlip from "./pages/MarketerCoinFlip";
 import Plinko from "./pages/Plinko";
 import CycleRace from "./pages/CycleRace";
+import CyclePredictions from "./pages/CyclePredictions";
 import CoinFlip from "./pages/CoinFlip";
 import CoinTrain from "./pages/CoinTrain";
 import Mines from "./pages/Mines";
@@ -55,6 +56,7 @@ const AppContent = () => {
       <Route path="/game" element={<Game />} />
       <Route path="/plinko" element={<Plinko />} />
       <Route path="/cycling-race" element={<CycleRace />} />
+      <Route path="/cycling-race-predictions" element={<CyclePredictions />} />
       <Route path="/coin-flip" element={<CoinFlip />} />
       <Route path="/coin-train" element={<CoinTrain />} />
       <Route path="/aviator-red" element={<AviatorRed />} />

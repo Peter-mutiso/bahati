@@ -34,6 +34,7 @@ interface UserData {
   username?: string;
   is_banned?: boolean;
   banned_at?: string | null;
+  account_type?: string;
   created_at: string;
   wallet?: { wallet_cash: number; wallet_bonus: number } | null;
   bets: UserBet[];
@@ -186,6 +187,27 @@ const UserManagement = () => {
     },
   });
 
+  // profiles.account_type is write-protected at the column-privilege level
+  // (see 20260806000000_cycling_race_account_types.sql) - a plain .update()
+  // from any client, admin included, is rejected by Postgres. This RPC is
+  // the only way to change it, and it re-checks the admin role itself.
+  const accountTypeMutation = useMutation({
+    mutationFn: async ({ userId, accountType }: { userId: string; accountType: string }) => {
+      const { error } = await supabase.rpc("set_profile_account_type", {
+        p_user_id: userId,
+        p_account_type: accountType,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      refetch();
+      toast.success("Account type updated");
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to update account type: " + error.message);
+    },
+  });
+
   const getUserStats = (user: UserData) => {
     // Combine bets from all game tables
     const allBets = [...(user.bets || []), ...(user.chickenRoadBets || [])];
@@ -233,6 +255,7 @@ const UserManagement = () => {
                   <TableHead className="whitespace-nowrap">Mobile</TableHead>
                   <TableHead className="whitespace-nowrap">Email</TableHead>
                   <TableHead className="whitespace-nowrap">Status</TableHead>
+                  <TableHead className="whitespace-nowrap">Account Type</TableHead>
                   <TableHead className="whitespace-nowrap">Balance</TableHead>
                   <TableHead className="whitespace-nowrap">Wagered</TableHead>
                   <TableHead className="whitespace-nowrap">Profit</TableHead>
@@ -278,6 +301,21 @@ const UserManagement = () => {
                             Active
                           </Badge>
                         )}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <Select
+                          value={user.account_type || "real"}
+                          onValueChange={(value) => accountTypeMutation.mutate({ userId: user.id, accountType: value })}
+                        >
+                          <SelectTrigger className="h-8 w-[100px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="real">Real</SelectItem>
+                            <SelectItem value="demo">Demo</SelectItem>
+                            <SelectItem value="bot">Bot</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <Badge variant="secondary">{symbol}{Number(balance).toFixed(2)}</Badge>
@@ -349,7 +387,7 @@ const UserManagement = () => {
                 })}
                 {filteredUsers?.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                       No users found matching "{searchQuery}"
                     </TableCell>
                   </TableRow>

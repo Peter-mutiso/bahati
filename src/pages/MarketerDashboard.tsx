@@ -1,5 +1,5 @@
 import { useMarketerCheck } from "@/hooks/useMarketerCheck";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -88,6 +88,8 @@ const MarketerDashboard = () => {
   const [withdrawDetails, setWithdrawDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const raceRefreshTimeout = useRef<number | null>(null);
+
   // Marketer sees (real × share%) as the deposit.
   // Marketer earns share% of what they see.
   // e.g. share=25%: user deposits KES 10 → marketer sees KES 2.50 → marketer earns 25% of 2.50 = KES 0.625
@@ -111,11 +113,17 @@ const MarketerDashboard = () => {
     // Polling fallback in case realtime events don't fire (e.g. publication/RLS gaps)
     const pollInterval = window.setInterval(loadData, 4000);
 
-    // Real-time: refresh results when a cycle race starts or finishes
+    // Real-time: refresh results when a cycle race starts or finishes.
+    // Debounced because the cycle race queue is topped up in a single
+    // multi-row insert (e.g. seeding all 100 upcoming races on first run),
+    // which Postgres replication reports as one change event per row -
+    // without this, a single top-up could call loadData() up to 100 times
+    // in a row.
     const racesSub = supabase
       .channel("marketer-races")
       .on("postgres_changes", { event: "*", schema: "public", table: "cycling_race_races" }, () => {
-        loadData();
+        if (raceRefreshTimeout.current) window.clearTimeout(raceRefreshTimeout.current);
+        raceRefreshTimeout.current = window.setTimeout(loadData, 300);
       })
       .subscribe();
 
@@ -140,6 +148,7 @@ const MarketerDashboard = () => {
 
     return () => {
       window.clearInterval(pollInterval);
+      if (raceRefreshTimeout.current) window.clearTimeout(raceRefreshTimeout.current);
       supabase.removeChannel(racesSub);
       supabase.removeChannel(roundsSub);
       supabase.removeChannel(coinFlipSub);

@@ -1,4 +1,4 @@
-import { Shield, ArrowLeft, Plus, Menu, Volume2, VolumeX, BookOpen, HelpCircle } from "lucide-react";
+import { Shield, ArrowLeft, Plus, Menu, Volume2, VolumeX, BookOpen, HelpCircle, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +82,14 @@ const CycleRaceHeader = ({ balance, onOpenProvablyFair }: CycleRaceHeaderProps) 
                       >
                         <HelpCircle className="w-5 h-5" />
                         How to Play
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start gap-3 h-12"
+                        onClick={() => navigate("/cycling-race-predictions")}
+                      >
+                        <TrendingUp className="w-5 h-5" />
+                        Predictions
                       </Button>
                     </div>
                   </div>

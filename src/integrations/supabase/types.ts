@@ -783,6 +783,90 @@ export type Database = {
           },
         ]
       }
+      cycling_race_predictions: {
+        Row: {
+          confidence_percentage: number
+          created_at: string
+          house_prediction_cyclist: number
+          id: string
+          race_id: string
+          race_number: number
+          real_outcome_cyclist: number
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          confidence_percentage: number
+          created_at?: string
+          house_prediction_cyclist: number
+          id?: string
+          race_id: string
+          race_number: number
+          real_outcome_cyclist: number
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          confidence_percentage?: number
+          created_at?: string
+          house_prediction_cyclist?: number
+          id?: string
+          race_id?: string
+          race_number?: number
+          real_outcome_cyclist?: number
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cycling_race_predictions_race_id_fkey"
+            columns: ["race_id"]
+            isOneToOne: true
+            referencedRelation: "cycling_race_races"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cycling_race_predictions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cycling_race_prediction_settings: {
+        Row: {
+          bias_mode: string
+          confidence_max: number
+          confidence_min: number
+          created_at: string
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          bias_mode?: string
+          confidence_max?: number
+          confidence_min?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          bias_mode?: string
+          confidence_max?: number
+          confidence_min?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       cycling_race_races: {
         Row: {
           created_at: string
@@ -1564,6 +1648,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_type: string
           avatar_url: string | null
           banned_at: string | null
           created_at: string
@@ -1578,6 +1663,7 @@ export type Database = {
           vip_tier_id: string | null
         }
         Insert: {
+          account_type?: string
           avatar_url?: string | null
           banned_at?: string | null
           created_at?: string
@@ -1592,6 +1678,7 @@ export type Database = {
           vip_tier_id?: string | null
         }
         Update: {
+          account_type?: string
           avatar_url?: string | null
           banned_at?: string | null
           created_at?: string
@@ -2220,6 +2307,48 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      list_cycling_race_predictions: {
+        Args: { p_limit?: number; p_tenant_id: string }
+        Returns: {
+          confidence_percentage: number
+          is_verified_outcome: boolean
+          predicted_cyclist: number
+          race_number: number
+        }[]
+      }
+      regenerate_house_cycling_race_prediction: {
+        Args: { p_prediction_id: string }
+        Returns: {
+          confidence_percentage: number
+          created_at: string
+          house_prediction_cyclist: number
+          id: string
+          race_id: string
+          race_number: number
+          real_outcome_cyclist: number
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+      }
+      set_profile_account_type: {
+        Args: { p_account_type: string; p_user_id: string }
+        Returns: {
+          account_type: string
+          avatar_url: string | null
+          banned_at: string | null
+          created_at: string
+          email: string
+          id: string
+          is_banned: boolean
+          pin: string | null
+          tenant_id: string | null
+          total_deposited: number
+          updated_at: string
+          username: string | null
+          vip_tier_id: string | null
+        }
       }
       update_profile_total_deposited: {
         Args: { p_amount: number; p_user_id: string }

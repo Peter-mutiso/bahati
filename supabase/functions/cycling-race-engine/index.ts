@@ -17,6 +17,11 @@ interface RaceSettings {
   manual_winner_cyclist: number | null;
 }
 
+// How many pre-generated races should always be sitting in the 'upcoming'
+// queue, ready to activate. Winners for these are decided once, when a race
+// is added to the queue - never recomputed later.
+const QUEUE_SIZE = 100;
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -58,70 +63,58 @@ Deno.serve(async (req) => {
         throw new Error('Settings not found');
       }
 
-      // Get last race number
-      const { data: lastRace } = await supabase
-        .from('cycling_race_races')
-        .select('race_number')
-        .order('race_number', { ascending: false })
-        .limit(1)
-        .single();
-
-      const nextRaceNumber = (lastRace?.race_number || 0) + 1;
-
-      // Determine winner with improved RTP logic
-      let winnerCyclist: number;
-      
-      if (settings.manual_winner_enabled && settings.manual_winner_cyclist) {
-        winnerCyclist = settings.manual_winner_cyclist;
-      } else {
-        // More lethal RTP: favor lower-odds cyclists (higher chance of house winning)
-        const rtpFactor = settings.rtp_percentage / 100;
-        const numCyclists = settings.number_of_cyclists;
-        
-        // Generate weighted random - lower cyclists (lower odds) have higher win chance
-        // This makes house edge more effective
-        const weights: number[] = [];
-        let totalWeight = 0;
-        
-        for (let i = 0; i < numCyclists; i++) {
-          // Exponential decay: first cyclist has highest weight
-          // Lower RTP = more weight towards lower-odds cyclists
-          const weight = Math.pow(1 - (rtpFactor * 0.3), i) * (numCyclists - i);
-          weights.push(weight);
-          totalWeight += weight;
+      // Pop the earliest pre-generated race off the 'upcoming' queue and
+      // promote it to active. This is an atomic DB operation (FOR UPDATE
+      // SKIP LOCKED inside the function) so it can't hand out the same
+      // queued race twice. The winner was already decided when this race
+      // was queued - it is not regenerated here, except that a currently
+      // enabled manual winner override still applies instantly.
+      const { data: activatedRace, error: activateError } = await supabase.rpc(
+        'activate_next_cycling_race',
+        {
+          p_tenant_id: tenantId,
+          p_manual_winner_enabled: settings.manual_winner_enabled,
+          p_manual_winner_cyclist: settings.manual_winner_cyclist,
+          p_race_duration: settings.race_duration_seconds
         }
-        
-        // Normalize and select
-        const random = Math.random() * totalWeight;
-        let cumulative = 0;
-        winnerCyclist = 1;
-        
-        for (let i = 0; i < weights.length; i++) {
-          cumulative += weights[i];
-          if (random <= cumulative) {
-            winnerCyclist = i + 1;
-            break;
-          }
-        }
+      );
+
+      if (activateError) throw activateError;
+
+      let race = activatedRace;
+
+      if (!race) {
+        // Queue was empty (e.g. very first run before it has ever been
+        // seeded). Fall back to the original immediate-generation behavior
+        // so the game never stalls, then let the top-up below start filling
+        // the queue for next time.
+        console.log('Upcoming queue empty, generating race immediately as fallback');
+
+        // race_number is left unset - the column default (a DB sequence)
+        // allocates it atomically, so two concurrent fallbacks can never
+        // collide on the same number.
+        const { data: fallbackRace, error: insertError } = await supabase
+          .from('cycling_race_races')
+          .insert({
+            winner_cyclist: determineWinner(settings),
+            race_duration: settings.race_duration_seconds,
+            status: 'preparing',
+            started_at: new Date().toISOString(),
+            tenant_id: tenantId
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        race = fallbackRace;
       }
 
-      // Create race
-      const { data: race, error } = await supabase
-        .from('cycling_race_races')
-        .insert({
-          race_number: nextRaceNumber,
-          winner_cyclist: winnerCyclist,
-          race_duration: settings.race_duration_seconds,
-          status: 'preparing',
-          started_at: new Date().toISOString(),
-          tenant_id: tenantId
-        })
-        .select()
-        .single();
+      console.log(`Race activated: ${race.id}, Number: ${race.race_number}, Winner: ${race.winner_cyclist} (RTP: ${settings.rtp_percentage}%)`);
 
-      if (error) throw error;
-
-      console.log(`Race created: ${race.id}, Number: ${nextRaceNumber}, Winner: ${winnerCyclist} (RTP: ${settings.rtp_percentage}%)`);
+      // Keep the queue topped up to QUEUE_SIZE for future rounds. This only
+      // ever adds new rows for the race(s) just consumed - it never touches
+      // winners already sitting in the queue.
+      await ensureQueueFilled(supabase, settings, tenantId);
 
       return new Response(
         JSON.stringify({ success: true, race }),
@@ -197,6 +190,74 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+// Determine a winner using the existing manual-override / weighted-RTP
+// logic. This is the same algorithm the engine always used for create-race -
+// it has just been extracted so it can also be used to pre-generate races
+// for the upcoming queue, instead of only running at the exact moment a
+// race goes live.
+function determineWinner(settings: RaceSettings): number {
+  if (settings.manual_winner_enabled && settings.manual_winner_cyclist) {
+    return settings.manual_winner_cyclist;
+  }
+
+  // More lethal RTP: favor lower-odds cyclists (higher chance of house winning)
+  const rtpFactor = settings.rtp_percentage / 100;
+  const numCyclists = settings.number_of_cyclists;
+
+  // Generate weighted random - lower cyclists (lower odds) have higher win chance
+  // This makes house edge more effective
+  const weights: number[] = [];
+  let totalWeight = 0;
+
+  for (let i = 0; i < numCyclists; i++) {
+    // Exponential decay: first cyclist has highest weight
+    // Lower RTP = more weight towards lower-odds cyclists
+    const weight = Math.pow(1 - (rtpFactor * 0.3), i) * (numCyclists - i);
+    weights.push(weight);
+    totalWeight += weight;
+  }
+
+  // Normalize and select
+  const random = Math.random() * totalWeight;
+  let cumulative = 0;
+  let winnerCyclist = 1;
+
+  for (let i = 0; i < weights.length; i++) {
+    cumulative += weights[i];
+    if (random <= cumulative) {
+      winnerCyclist = i + 1;
+      break;
+    }
+  }
+
+  return winnerCyclist;
+}
+
+// Top the 'upcoming' queue back up to QUEUE_SIZE for this tenant. Winners
+// are rolled here in JS (single source of truth for the RTP/manual-override
+// algorithm), but "how many do we actually need" is decided atomically in
+// Postgres via ensure_cycling_race_queue - a plain count-then-insert here
+// would race against a concurrent caller doing the same thing. Rolling
+// QUEUE_SIZE candidates every call is cheap (simple arithmetic, no I/O);
+// the DB function only keeps as many as the queue is actually short by and
+// discards the rest.
+async function ensureQueueFilled(supabase: any, settings: RaceSettings, tenantId: string) {
+  const candidateWinners = Array.from({ length: QUEUE_SIZE }, () => determineWinner(settings));
+
+  const { data: insertedCount, error } = await supabase.rpc('ensure_cycling_race_queue', {
+    p_tenant_id: tenantId,
+    p_queue_size: QUEUE_SIZE,
+    p_race_duration: settings.race_duration_seconds,
+    p_winners: candidateWinners
+  });
+
+  if (error) {
+    console.error('Failed to top up cycling race queue:', error);
+  } else if (insertedCount > 0) {
+    console.log(`Topped up cycling race queue with ${insertedCount} race(s) for tenant ${tenantId}`);
+  }
+}
 
 async function processRaceBets(supabase: any, raceId: string, winnerCyclist: number) {
   const { data: bets } = await supabase
