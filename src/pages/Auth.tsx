@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Rocket, Gift, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -56,18 +55,17 @@ const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [countryCode, setCountryCode] = useState("+254");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [nickname, setNickname] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [referralCodeInput, setReferralCodeInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { websiteName, websiteLogoUrl } = useWebsiteSettings();
   const tenantId = useTenantId();
-  
+
   const referralCode = searchParams.get('ref');
 
   useEffect(() => {
@@ -132,15 +130,15 @@ const Auth = () => {
           return;
         }
 
-        // Validate nickname
-        if (!nickname.trim()) {
-          toast.error("Nickname is required");
+        // Validate username
+        if (!username.trim()) {
+          toast.error("Username is required");
           setLoading(false);
           return;
         }
 
-        if (nickname.length < 3) {
-          toast.error("Nickname must be at least 3 characters");
+        if (username.trim().length < 3) {
+          toast.error("Username must be at least 3 characters");
           setLoading(false);
           return;
         }
@@ -151,30 +149,19 @@ const Auth = () => {
           return;
         }
 
-        // Validate confirm password
-        if (password !== confirmPassword) {
-          toast.error("Passwords do not match");
-          setLoading(false);
-          return;
-        }
-
-        // Validate terms agreement
-        if (!agreedToTerms) {
-          toast.error("Please agree to the Terms and Conditions");
-          setLoading(false);
-          return;
-        }
-
         // Tenant-scoped email for Supabase auth (allows same phone on different sites)
         const phoneEmail = `${tenantId}_${countryCode.replace('+', '')}${phoneNumber.replace(/\D/g, '')}@mobile.com`;
-        
+
+        // Typed referral code takes precedence over the ?ref= URL param
+        const effectiveReferralCode = referralCodeInput.trim() || referralCode;
+
         const { data, error } = await supabase.auth.signUp({
           email: phoneEmail,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
             data: {
-              username: nickname.trim(),
+              username: username.trim(),
               phone: `${countryCode}${phoneNumber.replace(/\D/g, '')}`,
               real_email: email.trim() || null,
               tenant_id: tenantId,
@@ -183,40 +170,37 @@ const Auth = () => {
         });
         if (error) throw error;
 
-        // Update profile with nickname and phone
+        // Persist the username directly rather than relying solely on the
+        // signup trigger reading it from metadata. handle_new_user() runs
+        // as an AFTER INSERT trigger on auth.users, inside the same
+        // transaction signUp() waits on - so by the time this code runs,
+        // the profiles row for this user is guaranteed to already exist.
+        // A plain update (own row, via player_update_own_profile) is
+        // therefore correct and race-free; it never touches phone_number/
+        // tenant_id/account_type, so it can't clobber what the trigger is
+        // responsible for.
         if (data.user) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          const { error: profileError } = await supabase
+          const { error: usernameError } = await supabase
             .from('profiles')
-            .update({ 
-              username: nickname.trim(),
-              email: email.trim() || phoneEmail,
-            })
+            .update({ username: username.trim() })
             .eq('id', data.user.id);
-          
-          if (profileError) {
-            console.error('Profile update error:', profileError);
-            await new Promise(resolve => setTimeout(resolve, 500));
-            await supabase
-              .from('profiles')
-              .update({ 
-                username: nickname.trim(),
-                email: email.trim() || phoneEmail,
-              })
-              .eq('id', data.user.id);
+          if (usernameError) {
+            // Don't block account creation on this - the account already
+            // exists at this point. Most likely cause is a username
+            // collision; the player can set a different one from Profile.
+            console.error('Failed to save username after signup:', usernameError);
           }
         }
-        
-        // Process referral code if present
-        if (referralCode && data.user) {
+
+        // Process referral code if present (typed code, or ?ref= fallback)
+        if (effectiveReferralCode && data.user) {
           try {
             const { data: referralResult, error: referralError } = await supabase.functions.invoke(
               'process-referral',
               {
-                body: { 
-                  referralCode: referralCode,
-                  newUserId: data.user.id 
+                body: {
+                  referralCode: effectiveReferralCode,
+                  newUserId: data.user.id
                 }
               }
             );
@@ -232,7 +216,7 @@ const Auth = () => {
             console.error('Failed to process referral:', refError);
           }
         }
-        
+
         toast.success("Account created! Welcome!");
         navigate("/");
       }
@@ -268,6 +252,22 @@ const Auth = () => {
         )}
 
         <form onSubmit={handleAuth} className="space-y-4">
+          {/* Username - Only for signup */}
+          {!isLogin && (
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                placeholder="Enter your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required={!isLogin}
+                disabled={loading}
+                className="w-full"
+              />
+            </div>
+          )}
+
           {/* Phone Number */}
           <div className="space-y-2">
             <Label htmlFor="phone">Phone Number</Label>
@@ -299,22 +299,6 @@ const Auth = () => {
               />
             </div>
           </div>
-
-          {/* Nickname - Only for signup */}
-          {!isLogin && (
-            <div className="space-y-2">
-              <Label htmlFor="nickname">Nickname</Label>
-              <Input
-                id="nickname"
-                placeholder="Enter your nickname"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                required={!isLogin}
-                disabled={loading}
-                className="w-full"
-              />
-            </div>
-          )}
 
           {/* Email - Optional, only for signup */}
           {/* {!isLogin && (
@@ -358,48 +342,25 @@ const Auth = () => {
             )}
           </div>
 
-          {/* Confirm Password - Only for signup */}
+          {/* Referral Code - Optional, only for signup */}
           {!isLogin && (
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="referralCodeInput">Referral Code (Optional)</Label>
               <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required={!isLogin}
+                id="referralCodeInput"
+                placeholder="Enter referral code"
+                value={referralCodeInput}
+                onChange={(e) => setReferralCodeInput(e.target.value)}
                 disabled={loading}
+                className="w-full"
               />
-              {confirmPassword && password !== confirmPassword && (
-                <p className="text-xs text-destructive mt-1">Passwords do not match</p>
-              )}
-            </div>
-          )}
-
-          {/* Terms and Conditions - Only for signup */}
-          {!isLogin && (
-            <div className="flex items-start space-x-2 pt-2">
-              <Checkbox
-                id="terms"
-                checked={agreedToTerms}
-                onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
-                disabled={loading}
-              />
-              <label
-                htmlFor="terms"
-                className="text-sm text-muted-foreground leading-tight cursor-pointer"
-              >
-                I have read and agree to the{" "}
-                <span className="text-primary underline">Terms and Conditions</span>
-              </label>
             </div>
           )}
 
           <Button
             type="submit"
             className="w-full bg-primary hover:bg-primary/90 glow-primary mt-4"
-            disabled={loading || (!isLogin && !agreedToTerms) || !tenantId}
+            disabled={loading || !tenantId}
           >
             {loading ? "Loading..." : !tenantId ? "Loading..." : isLogin ? "Login" : "Create Account"}
           </Button>

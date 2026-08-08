@@ -246,16 +246,32 @@ export const LeaderboardSection = () => {
       // Fetch recent wins from chicken_road_bets
       const { data: bets } = await supabase
         .from('chicken_road_bets')
-        .select('id, amount, profit, final_multiplier, user_id, profiles!inner(username)')
+        .select('id, amount, profit, final_multiplier, user_id')
         .eq('status', 'won')
         .order('created_at', { ascending: false })
         .limit(20);
-      
-      if (bets) {
-        setRealBets(bets);
-        const players: LeaderboardPlayer[] = bets.slice(0, 5).map((bet, i) => ({
+
+      if (bets && bets.length > 0) {
+        // Usernames are looked up separately through a narrow view that
+        // only ever exposes (id, username) - never email/phone/financial
+        // fields - since this section is public and shows other players'
+        // identities.
+        const userIds = [...new Set(bets.map(bet => bet.user_id))];
+        const { data: identities } = await supabase
+          .from('profile_public_usernames')
+          .select('id, username')
+          .in('id', userIds);
+
+        const usernameById = new Map((identities || []).map(p => [p.id, p.username]));
+        const betsWithProfiles = bets.map(bet => ({
+          ...bet,
+          profiles: { username: usernameById.get(bet.user_id) || null },
+        }));
+
+        setRealBets(betsWithProfiles);
+        const players: LeaderboardPlayer[] = betsWithProfiles.slice(0, 5).map((bet, i) => ({
           id: bet.id,
-          username: (bet.profiles as any)?.username || `Player${i}`,
+          username: bet.profiles?.username || `Player${i}`,
           amount: Number(bet.profit) || 0,
           multiplier: Number(bet.final_multiplier) || 1,
           avatarColor: avatarColors[i % avatarColors.length],
@@ -264,7 +280,7 @@ export const LeaderboardSection = () => {
         setRealPlayers(players);
       }
     };
-    
+
     fetchRealData();
   }, []);
   

@@ -2287,7 +2287,13 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profile_public_usernames: {
+        Row: {
+          id: string | null
+          username: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_referral_code: { Args: never; Returns: string }

@@ -182,7 +182,7 @@ const Home = () => {
               <Button 
                 variant="ghost" 
                 className="flex-shrink-0 bg-cyan-500/20 text-cyan-500 hover:bg-cyan-500/30 font-semibold"
-                onClick={() => navigate("/cycling-race")}
+                onClick={() => navigate("/cycle-race")}
               >
                 🚴 Cycle Race
               </Button>
@@ -347,7 +347,7 @@ const Home = () => {
                         <div className="flex flex-wrap gap-2 pt-1">
                           <Button 
                             size="sm"
-                            onClick={() => navigate("/cycling-race")}
+                            onClick={() => navigate("/cycle-race")}
                             className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold shadow-lg text-xs md:text-sm h-8 md:h-10 px-3 md:px-6"
                           >
                             <Play className="w-3 h-3 md:w-4 md:h-4 mr-1 fill-current" />
@@ -542,7 +542,7 @@ const Home = () => {
           {/* Cycle Race Featured Card */}
           <Card 
             className="relative overflow-hidden border-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/10 to-cyan-500/20 cursor-pointer group hover:shadow-2xl hover:shadow-cyan-500/20 transition-all duration-500 mt-4"
-            onClick={() => navigate("/cycling-race")}
+            onClick={() => navigate("/cycle-race")}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
@@ -591,7 +591,7 @@ const Home = () => {
                   className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold shadow-xl shadow-cyan-500/30 text-sm md:text-base h-10 md:h-12 px-6 md:px-8 group-hover:scale-105 transition-transform duration-300"
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate("/cycling-race");
+                    navigate("/cycle-race");
                   }}
                 >
                   <Play className="w-4 h-4 md:w-5 md:h-5 mr-2 fill-current" />

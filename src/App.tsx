@@ -3,7 +3,7 @@ import AviatorRed from "./pages/AviatorRed";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { GameEngineProvider } from "@/contexts/GameEngineContext";
 import { useSettings } from "@/hooks/useSettings";
 import { useWebsiteSettings } from "@/hooks/useWebsiteSettings";
@@ -55,7 +55,8 @@ const AppContent = () => {
       <Route path="/admin-login" element={<AdminLogin />} />
       <Route path="/game" element={<Game />} />
       <Route path="/plinko" element={<Plinko />} />
-      <Route path="/cycling-race" element={<CycleRace />} />
+      <Route path="/cycle-race" element={<CycleRace />} />
+      <Route path="/cycling-race" element={<Navigate to="/cycle-race" replace />} />
       <Route path="/cycling-race-predictions" element={<CyclePredictions />} />
       <Route path="/coin-flip" element={<CoinFlip />} />
       <Route path="/coin-train" element={<CoinTrain />} />

@@ -19,6 +19,8 @@ import { Loader2 } from "lucide-react";
 
 const Profile = () => {
   const [username, setUsername] = useState("");
+  const [usernameInput, setUsernameInput] = useState("");
+  const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
@@ -57,6 +59,7 @@ const Profile = () => {
 
       if (profile) {
         setUsername(profile.username || "");
+        setUsernameInput(profile.username || "");
         setAvatarUrl(profile.avatar_url);
         if (profile.vip_tiers) {
           setVipTier(profile.vip_tiers);
@@ -92,6 +95,65 @@ const Profile = () => {
       toast.error(error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveUsername = async () => {
+    const trimmed = usernameInput.trim();
+
+    if (!trimmed) {
+      toast.error("Username cannot be empty");
+      return;
+    }
+    if (trimmed.length < 3) {
+      toast.error("Username must be at least 3 characters");
+      return;
+    }
+    if (trimmed.length > 20) {
+      toast.error("Username must be 20 characters or fewer");
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) {
+      toast.error("Username can only contain letters, numbers, and underscores");
+      return;
+    }
+    if (trimmed === username) {
+      return;
+    }
+
+    setIsSavingUsername(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in to update your username");
+        return;
+      }
+
+      // Only ever updates the username column for the caller's own row -
+      // player_update_own_profile already restricts this to auth.uid() = id.
+      const { error } = await supabase
+        .from("profiles")
+        .update({ username: trimmed })
+        .eq("id", user.id);
+
+      if (error) {
+        if (error.code === "23505") {
+          toast.error("That username is already taken.");
+        } else {
+          console.error("Error updating username:", error);
+          toast.error("Failed to update username. Please try again.");
+        }
+        return;
+      }
+
+      setUsername(trimmed);
+      setUsernameInput(trimmed);
+      toast.success("Username updated successfully!");
+    } catch (error) {
+      console.error("Error updating username:", error);
+      toast.error("Failed to update username. Please try again.");
+    } finally {
+      setIsSavingUsername(false);
     }
   };
 
@@ -342,13 +404,6 @@ const Profile = () => {
                 </DialogContent>
               </Dialog>
               <div className="flex-1 space-y-3">
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                  <User className="w-4 h-4 text-primary" />
-                  <div className="flex-1">
-                    <p className="text-xs text-muted-foreground">Username</p>
-                    <p className="font-medium">{username || "Not set"}</p>
-                  </div>
-                </div>
                 {phoneNumber && (
                   <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                     <Phone className="w-4 h-4 text-primary" />
@@ -382,6 +437,39 @@ const Profile = () => {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Username */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Username
+            </CardTitle>
+            <CardDescription>This is the name shown when your identity is displayed in-game</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                placeholder="Enter username"
+                disabled={isSavingUsername}
+                maxLength={20}
+                className="flex-1"
+              />
+              <Button
+                onClick={handleSaveUsername}
+                disabled={isSavingUsername || usernameInput.trim() === username}
+              >
+                {isSavingUsername ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Save"
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

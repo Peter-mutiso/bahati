@@ -72,7 +72,7 @@ const allGames = [
     name: "Cycle Race",
     poster: cycleRacePoster,
     available: true,
-    route: "/cycling-race",
+    route: "/cycle-race",
     players: 512,
     rtp: 95,
     categories: ["skill-based", "high-win"]

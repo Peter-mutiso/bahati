@@ -15,7 +15,6 @@ interface Bet {
   status: string;
   created_at: string;
   profiles: {
-    email: string;
     username?: string;
     avatar_url?: string | null;
   };
@@ -47,7 +46,6 @@ const generateFakePlayer = (): Bet => {
     status,
     created_at: new Date().toISOString(),
     profiles: {
-      email: "",
       username: FAKE_USERNAMES[Math.floor(Math.random() * FAKE_USERNAMES.length)],
       avatar_url: null,
     },
@@ -156,7 +154,7 @@ const CycleRaceLiveBets = () => {
       } else if (myBetsData) {
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("id, email, username, avatar_url")
+          .select("id, username, avatar_url")
           .eq("id", session.user.id)
           .single();
 
@@ -179,7 +177,11 @@ const CycleRaceLiveBets = () => {
         <p className="text-center text-muted-foreground py-8">No bets yet</p>
       ) : (
         bets.map((bet) => {
-          const displayName = bet.profiles?.username || bet.profiles?.email?.split("@")[0] || "Anonymous";
+          // Never fall back to email - the phone-based signup flow embeds
+          // the player's phone number in the local part of their synthetic
+          // auth email, so splitting it would leak that instead of showing
+          // a safe placeholder.
+          const displayName = bet.profiles?.username || "Player";
           return (
             <div
               key={bet.id}
