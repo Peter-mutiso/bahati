@@ -783,6 +783,44 @@ export type Database = {
           },
         ]
       }
+      cycling_race_cyclist_names: {
+        Row: {
+          created_at: string
+          custom_name: string
+          cyclist_number: number
+          id: string
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_name: string
+          cyclist_number: number
+          id?: string
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_name?: string
+          cyclist_number?: number
+          id?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cycling_race_cyclist_names_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cycling_race_predictions: {
         Row: {
           confidence_percentage: number

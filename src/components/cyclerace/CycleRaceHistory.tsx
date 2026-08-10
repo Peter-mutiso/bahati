@@ -5,8 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Trophy, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useCyclistCustomNames } from "@/hooks/useCyclistCustomNames";
 
 const CycleRaceHistory = () => {
+  const { getDisplayName } = useCyclistCustomNames();
   const { data: recentRaces } = useQuery({
     queryKey: ["recent-cycle-races"],
     queryFn: async () => {
@@ -43,7 +45,7 @@ const CycleRaceHistory = () => {
 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate">
-                  Cyclist #{race.winner_cyclist}
+                  {getDisplayName(race.winner_cyclist, `Cyclist #${race.winner_cyclist}`)}
                 </p>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Clock className="w-3 h-3" />

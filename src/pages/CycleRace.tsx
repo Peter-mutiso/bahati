@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -10,8 +10,10 @@ import CycleRaceHistory from "@/components/cyclerace/CycleRaceHistory";
 import CycleRaceWinnersBar from "@/components/cyclerace/CycleRaceWinnersBar";
 import CycleRaceLiveBets from "@/components/cyclerace/CycleRaceLiveBets";
 import ProvablyFairModal from "@/components/cyclerace/ProvablyFairModal";
+import CycleRaceCyclistCustomizer from "@/components/cyclerace/CycleRaceCyclistCustomizer";
 import BottomNav from "@/components/layout/BottomNav";
 import { useCycleRaceEngine } from "@/hooks/useCycleRaceEngine";
+import { useCyclistCustomNames } from "@/hooks/useCyclistCustomNames";
 import cycleRacePoster from "@/assets/games/cycle-race-poster.jpg";
 
 // Lottie animation URL to preload
@@ -48,6 +50,19 @@ const CycleRace = () => {
   const [myBet, setMyBet] = useState<any>(null);
   const [pendingBet, setPendingBet] = useState<{ cyclist: number; amount: number } | null>(null);
   const [showProvablyFair, setShowProvablyFair] = useState(false);
+  const [showCustomizeCyclists, setShowCustomizeCyclists] = useState(false);
+  const { customNames, getDisplayName, saveCustomName, clearCustomName } = useCyclistCustomNames();
+
+  // `cyclists` always holds the real, shared default names (used internally
+  // and as the "default" label in the customizer dialog). `displayCyclists`
+  // is the presentation-only view with the current user's own custom names
+  // overlaid - this is the only thing rendered in the race UI, so
+  // cyclist_number/winner_cyclist and everything derived from `cyclists`
+  // itself is never affected by personalization.
+  const displayCyclists = useMemo(
+    () => cyclists.map((c) => ({ ...c, name: getDisplayName(c.number, c.name) })),
+    [cyclists, getDisplayName]
+  );
   
   // Asset preloading state
   const [showSplash, setShowSplash] = useState(true);
@@ -137,7 +152,7 @@ const CycleRace = () => {
     raceId: engineState.raceId || '',
     timeLeft: engineState.timeLeft,
     phase: engineState.phase,
-    cyclists,
+    cyclists: displayCyclists,
     winnerNumber: engineState.winnerCyclist || undefined
   };
 
@@ -502,6 +517,7 @@ const CycleRace = () => {
       <CycleRaceHeader
         balance={wallet ? (wallet.wallet_cash + wallet.wallet_bonus) : 0}
         onOpenProvablyFair={() => setShowProvablyFair(true)}
+        onOpenCustomizeCyclists={() => setShowCustomizeCyclists(true)}
       />
 
       <div className="container mx-auto px-2 sm:px-4 pt-16 pb-20 md:pt-24 md:pb-8">
@@ -572,6 +588,15 @@ const CycleRace = () => {
       <ProvablyFairModal
         open={showProvablyFair}
         onClose={() => setShowProvablyFair(false)}
+      />
+
+      <CycleRaceCyclistCustomizer
+        open={showCustomizeCyclists}
+        onClose={() => setShowCustomizeCyclists(false)}
+        cyclists={cyclists}
+        customNames={customNames}
+        saveCustomName={saveCustomName}
+        clearCustomName={clearCustomName}
       />
 
       <BottomNav isAuthenticated={!!user} />
