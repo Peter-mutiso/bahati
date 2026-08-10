@@ -1,4 +1,4 @@
-import { Shield, ArrowLeft, Plus, Menu, Volume2, VolumeX, BookOpen, HelpCircle, TrendingUp, User } from "lucide-react";
+import { Shield, ArrowLeft, Plus, Menu, Volume2, VolumeX, BookOpen, HelpCircle, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +13,9 @@ import { useCycleRaceSound } from "@/hooks/useCycleRaceSound";
 interface CycleRaceHeaderProps {
   balance: number;
   onOpenProvablyFair: () => void;
-  onOpenCustomizeCyclists: () => void;
 }
 
-const CycleRaceHeader = ({ balance, onOpenProvablyFair, onOpenCustomizeCyclists }: CycleRaceHeaderProps) => {
+const CycleRaceHeader = ({ balance, onOpenProvablyFair }: CycleRaceHeaderProps) => {
   const { symbol } = useCurrency();
   const navigate = useNavigate();
   const { isSoundEnabled, toggleSound } = useCycleRaceSound();
@@ -91,14 +90,6 @@ const CycleRaceHeader = ({ balance, onOpenProvablyFair, onOpenCustomizeCyclists 
                       >
                         <TrendingUp className="w-5 h-5" />
                         Predictions
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start gap-3 h-12"
-                        onClick={onOpenCustomizeCyclists}
-                      >
-                        <User className="w-5 h-5" />
-                        Customize Cyclists
                       </Button>
                     </div>
                   </div>

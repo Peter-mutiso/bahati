@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Minus, Plus, TrendingUp } from "lucide-react";
+import { Minus, Plus, TrendingUp, Pencil } from "lucide-react";
 
 interface Cyclist {
   number: number;
@@ -38,6 +38,7 @@ interface CycleRaceBetSectionProps {
   minBet: number;
   maxBet: number;
   cyclists: Cyclist[];
+  onOpenCustomizeCyclists: () => void;
 }
 
 const CycleRaceBetSection = ({
@@ -52,7 +53,8 @@ const CycleRaceBetSection = ({
   raceState,
   minBet,
   maxBet,
-  cyclists
+  cyclists,
+  onOpenCustomizeCyclists
 }: CycleRaceBetSectionProps) => {
   const { symbol } = useCurrency();
   const isMobile = useIsMobile();
@@ -70,7 +72,18 @@ const CycleRaceBetSection = ({
   return (
     <Card className="p-2 sm:p-4 space-y-2 sm:space-y-4 bg-card/50 backdrop-blur-lg border-border/50 lg:bg-card/50">
       <div>
-        <h3 className="text-xs sm:text-sm font-semibold mb-1 sm:mb-2 text-muted-foreground">Select Cyclist</h3>
+        <div className="flex items-center justify-between mb-1 sm:mb-2">
+          <h3 className="text-xs sm:text-sm font-semibold text-muted-foreground">Select Cyclist</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onOpenCustomizeCyclists}
+            className="h-6 sm:h-7 px-1.5 sm:px-2 gap-1 text-[10px] sm:text-xs text-muted-foreground hover:text-foreground shrink-0"
+          >
+            <Pencil className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span>Edit</span>
+          </Button>
+        </div>
         <div className="grid grid-cols-6 gap-1 sm:gap-2 mb-2 sm:mb-4">
           {cyclists.map((cyclist) => {
             const button = (

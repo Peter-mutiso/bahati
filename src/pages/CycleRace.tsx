@@ -517,7 +517,6 @@ const CycleRace = () => {
       <CycleRaceHeader
         balance={wallet ? (wallet.wallet_cash + wallet.wallet_bonus) : 0}
         onOpenProvablyFair={() => setShowProvablyFair(true)}
-        onOpenCustomizeCyclists={() => setShowCustomizeCyclists(true)}
       />
 
       <div className="container mx-auto px-2 sm:px-4 pt-16 pb-20 md:pt-24 md:pb-8">
@@ -537,6 +536,7 @@ const CycleRace = () => {
               minBet={settings?.min_bet || 10}
               maxBet={settings?.max_bet || 10000}
               cyclists={raceState.cyclists}
+              onOpenCustomizeCyclists={() => setShowCustomizeCyclists(true)}
             />
           </div>
 
@@ -570,6 +570,7 @@ const CycleRace = () => {
               minBet={settings?.min_bet || 10}
               maxBet={settings?.max_bet || 10000}
               cyclists={raceState.cyclists}
+              onOpenCustomizeCyclists={() => setShowCustomizeCyclists(true)}
             />
           </div>
 
