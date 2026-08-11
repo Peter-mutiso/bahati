@@ -91,22 +91,29 @@ const CycleRaceBetSection = ({
                 variant={selectedCyclist === cyclist.number ? "default" : "outline"}
                 size="sm"
                 onClick={() => onSelectCyclist(cyclist.number)}
-                className={`rounded-lg h-9 sm:h-12 font-bold text-xs sm:text-base ${
-                  selectedCyclist === cyclist.number 
-                    ? "ring-2 ring-primary shadow-lg" 
+                className={`rounded-lg h-11 sm:h-12 font-bold text-xs sm:text-base flex flex-col items-center justify-center gap-0 px-0.5 ${
+                  selectedCyclist === cyclist.number
+                    ? "ring-2 ring-primary shadow-lg"
                     : ""
                 }`}
                 style={
-                  selectedCyclist === cyclist.number 
+                  selectedCyclist === cyclist.number
                     ? { backgroundColor: cyclist.color, color: 'white' }
                     : {}
                 }
               >
-                {cyclist.number}
+                <span className="leading-none">{cyclist.number}</span>
+                {isMobile && (
+                  <span className="leading-none text-[8px] font-medium w-full text-center truncate">
+                    {cyclist.name}
+                  </span>
+                )}
               </Button>
             );
 
-            // Hide tooltips on mobile
+            // Names are shown directly on the button on mobile (above) since
+            // there is no hover there - the tooltip below is a desktop-only
+            // supplementary detail view, not the only way to see the name.
             if (isMobile) {
               return <div key={cyclist.number}>{button}</div>;
             }

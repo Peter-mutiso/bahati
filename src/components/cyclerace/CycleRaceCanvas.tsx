@@ -264,9 +264,9 @@ const CycleRaceCanvas = ({ cyclists, raceState, selectedCyclist, phase = 1, time
               >
                 {cyclist.number}
               </div>
-              <div className="hidden md:block">
-                <p className="text-xs font-semibold text-foreground">{cyclist.name}</p>
-                <p className="text-xs text-muted-foreground">{cyclist.flag}</p>
+              <div className="min-w-0 max-w-[76px] sm:max-w-[130px] md:max-w-none">
+                <p className="text-[10px] sm:text-xs font-semibold text-foreground truncate">{cyclist.name}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">{cyclist.flag}</p>
               </div>
             </div>
 
