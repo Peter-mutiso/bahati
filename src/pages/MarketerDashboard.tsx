@@ -1,6 +1,7 @@
 import { useMarketerCheck } from "@/hooks/useMarketerCheck";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -19,6 +20,12 @@ import {
 } from "recharts";
 import { Bike, Plane, Drumstick, Train, FlipHorizontal, Circle, Bomb, Eye, Settings } from "lucide-react";
 import { formatNairobiTime, formatNairobiDate, formatNairobiDateTime } from "@/lib/utils";
+import { CycleRacePredictions } from "@/components/admin/CycleRacePredictions";
+
+interface CyclistCustomization {
+  name: string;
+  flag: string;
+}
 
 interface UserRow {
   id: string;
@@ -63,6 +70,7 @@ interface UpcomingResult {
 const MarketerDashboard = () => {
   const { isMarketer, isLoading, marketerId, assignedTenantId } = useMarketerCheck();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [revenueSharePct, setRevenueSharePct] = useState(25);
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -82,6 +90,7 @@ const MarketerDashboard = () => {
     status: string;
     winnerCyclist: number;
   } | null>(null);
+  const [cyclistCustomization, setCyclistCustomization] = useState<CyclistCustomization[]>([]);
 
   // Withdraw form
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -107,6 +116,22 @@ const MarketerDashboard = () => {
   const availableBalance = +(totalEarnings - paidOut - pendingWithdrawals).toFixed(2);
 
   useEffect(() => {
+    if (!isMarketer) return;
+    // Same source every other Cycle Race screen uses for cyclist display
+    // names (cycling_race_settings.cyclist_customization) - loaded once,
+    // this table rarely changes and isn't part of the 4s polling below.
+    supabase
+      .from("cycling_race_settings")
+      .select("cyclist_customization")
+      .maybeSingle()
+      .then(({ data }) => {
+        if (Array.isArray(data?.cyclist_customization)) {
+          setCyclistCustomization(data.cyclist_customization as unknown as CyclistCustomization[]);
+        }
+      });
+  }, [isMarketer]);
+
+  useEffect(() => {
     if (!isMarketer || !assignedTenantId) return;
     loadData();
 
@@ -123,7 +148,14 @@ const MarketerDashboard = () => {
       .channel("marketer-races")
       .on("postgres_changes", { event: "*", schema: "public", table: "cycling_race_races" }, () => {
         if (raceRefreshTimeout.current) window.clearTimeout(raceRefreshTimeout.current);
-        raceRefreshTimeout.current = window.setTimeout(loadData, 300);
+        raceRefreshTimeout.current = window.setTimeout(() => {
+          loadData();
+          // Keeps the "Next 10 Upcoming Rounds" predictor rolling: a race
+          // leaving 'upcoming' (or a new one entering the queue) should
+          // refetch CycleRacePredictions' own query immediately rather than
+          // waiting for its 5s refetchInterval fallback.
+          queryClient.invalidateQueries({ queryKey: ["cycling-race-predictions"] });
+        }, 300);
       })
       .subscribe();
 
@@ -153,7 +185,13 @@ const MarketerDashboard = () => {
       supabase.removeChannel(roundsSub);
       supabase.removeChannel(coinFlipSub);
     };
-  }, [isMarketer, assignedTenantId]);
+    // queryClient is included because it's now referenced inside this effect
+    // (invalidateQueries above) - it's a stable reference from
+    // useQueryClient() for the app's lifetime, so this cannot cause the
+    // subscription/interval lifecycle to recreate. loadData is deliberately
+    // still omitted: it's redefined every render (not memoized), so adding
+    // it would tear down and resubscribe every channel on every render.
+  }, [isMarketer, assignedTenantId, queryClient]);
 
   const loadData = async () => {
     // Revenue share %
@@ -718,6 +756,25 @@ const MarketerDashboard = () => {
                         ) : (
                           <p className="text-xs text-muted-foreground">No race in progress right now.</p>
                         )}
+                      </div>
+                    )}
+
+                    {gameAssignments.some(a => a.game_slug === "cycling-race") && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <Bike className="w-4 h-4 text-blue-400" />
+                          Cycle Race — Next 10 Upcoming Rounds
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          These are the next 10 Cycle Race rounds scheduled to run, showing the
+                          real predetermined outcome for each race.
+                        </p>
+                        <CycleRacePredictions
+                          cyclistCustomization={cyclistCustomization}
+                          readOnly
+                          onlyUpcoming
+                          limit={10}
+                        />
                       </div>
                     )}
 

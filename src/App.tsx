@@ -40,6 +40,12 @@ import ChickenRoad from "./pages/ChickenRoad";
 
 const queryClient = new QueryClient();
 
+// When set for a deployment (e.g. a client's Cycle-Race-only domain), the
+// root route opens Cycle Race directly instead of the multi-game Home
+// dashboard. Unset/false (the default) leaves the existing multi-game app
+// completely unchanged - this only ever affects what "/" renders.
+const STANDALONE_CYCLE_RACE = import.meta.env.VITE_STANDALONE_CYCLE_RACE === "true";
+
 const AppContent = () => {
   // Initialize settings (theme and performance mode)
   useSettings();
@@ -47,10 +53,10 @@ const AppContent = () => {
   useWebsiteSettings();
   // Initialize theme colors
   useThemeColors();
-  
+
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={STANDALONE_CYCLE_RACE ? <CycleRace /> : <Home />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/admin-login" element={<AdminLogin />} />
       <Route path="/game" element={<Game />} />
