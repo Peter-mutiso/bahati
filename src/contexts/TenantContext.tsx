@@ -1,6 +1,26 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+// ─── Cycle Race domain aliases ─────────────────────────────────────────────────
+//
+// The five Cycle Race domains (and their www variants) all share ONE
+// existing tenant - the tenants.domain column has a UNIQUE constraint, so
+// only the canonical domain below is ever actually stored as a row. Every
+// other hostname in this map is translated to that canonical value before
+// the existing tenant lookup query runs; the query itself, RLS, and every
+// other hostname not listed here are completely unaffected.
+const CYCLE_RACE_TENANT_DOMAIN_ALIASES: Record<string, string> = {
+  "www.nyotares.com": "nyotares.com",
+  "baiskol.com": "nyotares.com",
+  "www.baiskol.com": "nyotares.com",
+  "bikeres.com": "nyotares.com",
+  "www.bikeres.com": "nyotares.com",
+  "krests.com": "nyotares.com",
+  "www.krests.com": "nyotares.com",
+  "siakabike.com": "nyotares.com",
+  "www.siakabike.com": "nyotares.com",
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Tenant {
@@ -68,10 +88,11 @@ export const TenantProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // ── Production: domain MUST be registered and active ─────────────────────
+      const lookupDomain = CYCLE_RACE_TENANT_DOMAIN_ALIASES[hostname] ?? hostname;
       const { data, error } = await supabase
         .from("tenants")
         .select("*")
-        .eq("domain", hostname)
+        .eq("domain", lookupDomain)
         .maybeSingle();
 
       if (error) {

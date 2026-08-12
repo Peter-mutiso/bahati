@@ -31,6 +31,7 @@ import MarketerCoinFlip from "./pages/MarketerCoinFlip";
 import Plinko from "./pages/Plinko";
 import CycleRace from "./pages/CycleRace";
 import CyclePredictions from "./pages/CyclePredictions";
+import CycleRacePredictionsOversight from "./pages/CycleRacePredictionsOversight";
 import CoinFlip from "./pages/CoinFlip";
 import CoinTrain from "./pages/CoinTrain";
 import Mines from "./pages/Mines";
@@ -46,6 +47,26 @@ const queryClient = new QueryClient();
 // completely unchanged - this only ever affects what "/" renders.
 const STANDALONE_CYCLE_RACE = import.meta.env.VITE_STANDALONE_CYCLE_RACE === "true";
 
+// The five production Cycle-Race-only domains (plus their www variants).
+// Any hostname in this set gets the reduced, Cycle-Race-only route table
+// below instead of the full multi-game app. Every other hostname (including
+// localhost and the existing production domain) is completely unaffected.
+const CYCLE_RACE_ONLY_HOSTNAMES = new Set([
+  "nyotares.com", "www.nyotares.com",
+  "baiskol.com", "www.baiskol.com",
+  "bikeres.com", "www.bikeres.com",
+  "krests.com", "www.krests.com",
+  "siakabike.com", "www.siakabike.com",
+]);
+const isCycleRaceOnlyHost = CYCLE_RACE_ONLY_HOSTNAMES.has(window.location.hostname);
+const cycleRaceOnly = STANDALONE_CYCLE_RACE || isCycleRaceOnlyHost;
+
+// Predictions-only oversight domain. Left unset until the client supplies
+// the real hostname - with it unset, isPredictionsHost is always false and
+// the app behaves exactly as it does today.
+const PREDICTIONS_HOST = import.meta.env.VITE_CYCLE_RACE_PREDICTIONS_HOST;
+const isPredictionsHost = !!PREDICTIONS_HOST && window.location.hostname === PREDICTIONS_HOST;
+
 const AppContent = () => {
   // Initialize settings (theme and performance mode)
   useSettings();
@@ -54,9 +75,45 @@ const AppContent = () => {
   // Initialize theme colors
   useThemeColors();
 
+  // Predictions-only oversight domain: exposes nothing but the existing
+  // admin/marketer prediction view, gated by the same existing
+  // authorization checks. No betting UI, no other games, no wallet routes.
+  if (isPredictionsHost) {
+    return (
+      <Routes>
+        <Route path="/" element={<CycleRacePredictionsOversight />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
+
+  // Cycle-Race-only domains: only the routes the existing Cycle Race player
+  // experience genuinely needs (the game itself, its predictions page, and
+  // the account/auth pages it links to). No other game, no admin, no
+  // marketer routes exist on these hostnames at all.
+  if (cycleRaceOnly) {
+    return (
+      <Routes>
+        <Route path="/" element={<CycleRace />} />
+        <Route path="/cycle-race" element={<CycleRace />} />
+        <Route path="/cycling-race" element={<Navigate to="/cycle-race" replace />} />
+        <Route path="/cycling-race-predictions" element={<CyclePredictions />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/wallet" element={<Wallet />} />
+        <Route path="/history" element={<History />} />
+        <Route path="/transactions" element={<Transactions />} />
+        <Route path="/referrals" element={<Referrals />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/live-chat" element={<LiveChatPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
+
   return (
     <Routes>
-      <Route path="/" element={STANDALONE_CYCLE_RACE ? <CycleRace /> : <Home />} />
+      <Route path="/" element={<Home />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/admin-login" element={<AdminLogin />} />
       <Route path="/game" element={<Game />} />
@@ -69,7 +126,7 @@ const AppContent = () => {
       <Route path="/aviator-red" element={<AviatorRed />} />
       <Route path="/mines" element={<Mines />} />
       <Route path="/wingo" element={<Wingo />} />
-      
+
       <Route path="/wallet" element={<Wallet />} />
       <Route path="/history" element={<History />} />
       <Route path="/transactions" element={<Transactions />} />
@@ -84,7 +141,7 @@ const AppContent = () => {
       <Route path="/marketer-pending" element={<MarketerPending />} />
       <Route path="/marketer" element={<MarketerDashboard />} />
       <Route path="/marketer/coinflip" element={<MarketerCoinFlip />} />
-      
+
     </Routes>
   );
 };
